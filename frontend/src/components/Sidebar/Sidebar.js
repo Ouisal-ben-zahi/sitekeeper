@@ -188,7 +188,7 @@ const Sidebar = (props) => {
             {/* Domain Management */}
             <h6 className="navbar-heading text-muted mt-3">Domain Services</h6>
             <NavItem>
-              <NavLink
+            <NavLink
                 to="/admin/domains"
                 tag={NavLinkRRD}
                 onClick={closeCollapse}

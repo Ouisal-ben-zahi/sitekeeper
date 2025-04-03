@@ -34,8 +34,6 @@ class DomainController extends Controller
             'statut' => 'required|in:actif,inactif,expiré', // Validation de l'enum
             'client_id' => 'required|exists:clients,id', // Vérifie que le client existe
             'date_expirationSsl' => 'required|date|after_or_equal:today', // Validation de la date d'expiration du certificat SSL
-            'dateDebutContrat' => 'required|date|after_or_equal:today', // Validation de la date d'expiration du certificat SSL
-            'dateFinContrat' => 'required|date|after_or_equal:today', // Validation de la date d'expiration du certificat SSL
 
     ]);    
         // Création du domaine
@@ -51,13 +49,7 @@ class DomainController extends Controller
             'date_expiration' => $request->date_expirationSsl,
             'statut' => 'valide',
         ]);
-        // Création du contrat de maintenance
-        $contratMaintenance = ContratMaintenance::create([
-            'client_id' =>  $request->client_id,
-            'date_debut' => $request->dateDebutContrat,
-            'date_fin' => $request->dateFinContrat,
-            'statut' => 'actif',
-        ]);
+        
         
           // Retourner une réponse JSON
         return response()->json(['domaine' => $domaine, 'message' => 'Domaine créé avec succès'], 201);
@@ -135,8 +127,6 @@ class DomainController extends Controller
             '*.client_id' => 'required|exists:clients,id', // Vérifie que le client existe
             '*.date_expiration' => 'required|date',
             '*.date_expirationSsl' => 'required|date',
-            '*.dateDebutContrat' => 'required|date',
-            '*.dateFinContrat' => 'required|date',
             '*.statut' => 'sometimes|string|in:actif,inactif,expiré', // Optionnel
         ]);
     
@@ -168,13 +158,7 @@ class DomainController extends Controller
                     'statut' => 'valide',
                 ]);
     
-                // Création du contrat de maintenance
-                ContratMaintenance::create([
-                    'client_id' => $domaine['client_id'],
-                    'date_debut' => $domaine['dateDebutContrat'],
-                    'date_fin' => $domaine['dateFinContrat'],
-                    'statut' => 'actif',
-                ]);
+                
             }
     
             return response()->json([

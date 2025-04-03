@@ -19,11 +19,12 @@ import Index from "views/Index.js";
 import Profile from "views/examples/Profile.js";
 import Register from "views/examples/Register.js";
 import Login from "views/examples/Login.js";
-import Tables from "views/examples/Tables.js";
 import Icons from "views/examples/Icons.js";
 import LogoutToLogin from "views/examples/logout";
 import Clients from "views/examples/Clients";
 import ClientProfile from "views/examples/ClientProfile";
+import DomainName from "views/examples/Tables";
+import DomainDetails from "views/examples/domainDetails";
 
 var routes = [
   {
@@ -34,7 +35,7 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/icons",
+    path: "/domai",
     name: "Icons",
     icon: "ni ni-planet text-blue",
     component: <Icons />,
@@ -46,6 +47,15 @@ var routes = [
     icon: "ni ni-pin-3 text-orange",
     component: <Clients/>,
     layout: "/admin",
+
+  },
+  {
+    path: "/domains",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <DomainName/>,
+    layout: "/admin",
+
   },
   {
     path: "/user-profile",
@@ -61,15 +71,16 @@ var routes = [
     component: <ClientProfile />,
     layout: "/admin",
   },
-  
-  
   {
-    path: "/tables",
-    name: "Tables",
-    icon: "ni ni-bullet-list-67 text-red",
-    component: <Tables />,
+    path: "/domain-details/:id",
+    name: "User Profile",
+    icon: "ni ni-single-02 text-yellow",
+    component: <DomainDetails/>,
     layout: "/admin",
   },
+  
+  
+  
   {
     path: "/login",
     name: "Login",
