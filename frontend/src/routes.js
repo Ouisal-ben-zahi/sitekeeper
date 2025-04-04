@@ -19,12 +19,14 @@ import Index from "views/Index.js";
 import Profile from "views/examples/Profile.js";
 import Register from "views/examples/Register.js";
 import Login from "views/examples/Login.js";
-import Icons from "views/examples/Icons.js";
 import LogoutToLogin from "views/examples/logout";
 import Clients from "views/examples/Clients";
 import ClientProfile from "views/examples/ClientProfile";
-import DomainName from "views/examples/Tables";
 import DomainDetails from "views/examples/domainDetails";
+import Users from "views/examples/Users";
+import DomainName from "views/examples/DomainName";
+import UserProfile from "views/examples/UserDetails";
+import History from "views/examples/history";
 
 var routes = [
   {
@@ -34,13 +36,7 @@ var routes = [
     component: <Index />,
     layout: "/admin",
   },
-  {
-    path: "/domai",
-    name: "Icons",
-    icon: "ni ni-planet text-blue",
-    component: <Icons />,
-    layout: "/admin",
-  },
+ 
   {
     path: "/Clients",
     name: "Maps",
@@ -50,7 +46,31 @@ var routes = [
 
   },
   {
+    path: "/users",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <Users/>,
+    layout: "/admin",
+
+  },
+  {
+    path: "/users/:id",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <UserProfile/>,
+    layout: "/admin",
+
+  },
+  {
     path: "/domains",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <DomainName/>,
+    layout: "/admin",
+
+  },
+  {
+    path: "/domains/:id",
     name: "Maps",
     icon: "ni ni-pin-3 text-orange",
     component: <DomainName/>,
@@ -64,6 +84,7 @@ var routes = [
     component: <Profile />,
     layout: "/admin",
   },
+
   {
     path: "/client-profile/:id",
     name: "User Profile",
@@ -78,9 +99,14 @@ var routes = [
     component: <DomainDetails/>,
     layout: "/admin",
   },
-  
-  
-  
+  {
+    path: "/history",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <History/>,
+    layout: "/admin",
+
+  },
   {
     path: "/login",
     name: "Login",

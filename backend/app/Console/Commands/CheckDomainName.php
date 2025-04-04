@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domaine;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -28,41 +29,49 @@ class CheckDomainName extends Command
      * Execute the console command.
      */
     public function handle()
-    {
-        Log::info('Début de la vérification des domaines.');
+{
+    Log::info('Début de la vérification des domaines.');
 
-        Domaine::chunk(50, function ($domaines) {
-            foreach ($domaines as $domaine) {
-                // Sauvegarder l'ancien statut avant de le modifier
-                $previousStatus = $domaine->statut;
+    // ID d'un utilisateur système ou null
+    $systemUserId = optional(User::where('email', 'system@domain.com')->first())->id;
 
-                try {
-                    // Vérifier le statut du domaine
-                    $response = Http::timeout(10)
-                        ->withOptions([
-                            'allow_redirects' => true,
-                            'verify' => false, // Désactiver temporairement la vérification SSL
-                        ])
-                        ->get("https://" . $domaine->nom_domaine);
+    Domaine::chunk(50, function ($domaines) use ($systemUserId) {
+        foreach ($domaines as $domaine) {
+            $previousStatus = $domaine->statut;
 
-                    // Mettre à jour le statut du domaine
-                    $domaine->statut = $response->successful() ? "actif" : "inactif";
-                } catch (RequestException $e) {
-                    Log::error("HTTP error checking domain {$domaine->nom_domaine}: " . $e->getMessage());
-                    $domaine->statut = "inactif";
-                } catch (\Exception $e) {
-                    Log::error("Error checking domain {$domaine->nom_domaine}: " . $e->getMessage());
-                    $domaine->statut = "inactif";
+            try {
+                $response = Http::timeout(10)
+                    ->withOptions([
+                        'allow_redirects' => true,
+                        'verify' => false,
+                    ])
+                    ->get("https://" . $domaine->nom_domaine);
+
+                $newStatus = $response->successful() ? "actif" : "inactif";
+                
+                // Ne sauvegarder que si le statut a changé
+                if ($newStatus !== $previousStatus) {
+                    $domaine->statut = $newStatus;
+                    $domaine->save();
                 }
 
-                // Sauvegarder le statut du domaine
-                $domaine->save();
-
-                
+            } catch (RequestException $e) {
+                Log::error("HTTP error checking domain {$domaine->nom_domaine}: " . $e->getMessage());
+                if ("inactif" !== $previousStatus) {
+                    $domaine->statut = "inactif";
+                    $domaine->save();
+                }
+            } catch (\Exception $e) {
+                Log::error("Error checking domain {$domaine->nom_domaine}: " . $e->getMessage());
+                if ("inactif" !== $previousStatus) {
+                    $domaine->statut = "inactif";
+                    $domaine->save();
+                }
             }
-        });
+        }
+    });
 
-        Log::info('Fin de la vérification des domaines.');
-        $this->info('Domain status check completed.');
-    }
+    Log::info('Fin de la vérification des domaines.');
+    $this->info('Domain status check completed.');
+}
 }

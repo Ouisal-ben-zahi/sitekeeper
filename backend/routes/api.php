@@ -8,6 +8,8 @@ use App\Http\Controllers\DomainController;
 use App\Http\Controllers\TechnologieController;
 use App\Http\Controllers\CertificatSslController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DomaineHistoryController;
+
 // Route par défaut
 Route::get('/', function () {
     return 'API';
@@ -20,6 +22,8 @@ Route::apiResource('domaines', DomainController::class);
 Route::apiResource('technologies', TechnologieController::class);
 Route::apiResource('certificatSsl', CertificatSslController::class);
 Route::post('/domaines/import', [DomainController::class,"import"]);
+Route::apiResource('history', DomaineHistoryController::class);
+
 // Routes pour l'authentification
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);

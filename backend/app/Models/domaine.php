@@ -14,4 +14,8 @@ class domaine extends Model
     {
         return $this->belongsTo(Client::class);
     }
+    public function history()
+{
+    return $this->hasMany(DomaineHistory::class);
+}
 }
