@@ -27,6 +27,7 @@ import Users from "views/examples/Users";
 import DomainName from "views/examples/DomainName";
 import UserProfile from "views/examples/UserDetails";
 import History from "views/examples/history";
+import HistoryTechnology from "views/examples/HistoryTechnology";
 
 var routes = [
   {
@@ -100,10 +101,18 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/history",
+    path: "/historyDomains",
     name: "Maps",
     icon: "ni ni-pin-3 text-orange",
     component: <History/>,
+    layout: "/admin",
+
+  },
+  {
+    path: "/historyTechnology",
+    name: "Maps",
+    icon: "ni ni-pin-3 text-orange",
+    component: <HistoryTechnology/>,
     layout: "/admin",
 
   },

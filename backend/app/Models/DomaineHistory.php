@@ -13,6 +13,8 @@ class DomaineHistory extends Model
     'action',
     'old_value',
     'new_value',
+    'old_technology_name',
+    'old_technology_version',
     'technology_name',
     'technology_version',
 ];

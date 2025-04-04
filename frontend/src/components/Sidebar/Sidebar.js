@@ -202,13 +202,24 @@ const Sidebar = (props) => {
             {/* History Section */}
             <NavItem>
               <NavLink
-                to="/admin/history"
+                to="/admin/historyDomains"
                 tag={NavLinkRRD}
                 onClick={closeCollapse}
                 activeClassName="active"
               >
                 <i className="ni ni-bullet-list-67 text-red" />
-                History
+                History Domain
+              </NavLink>
+            </NavItem>
+            <NavItem>
+              <NavLink
+                to="/admin/historyTechnology"
+                tag={NavLinkRRD}
+                onClick={closeCollapse}
+                activeClassName="active"
+              >
+                <i className="ni ni-bullet-list-67 text-red" />
+                History Technology
               </NavLink>
             </NavItem>
 

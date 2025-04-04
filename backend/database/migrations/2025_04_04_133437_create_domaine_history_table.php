@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('action'); // 'status_change', 'technology_detection', 'deletion'
             $table->text('old_value')->nullable();
             $table->text('new_value')->nullable();
+            $table->string('old_technology_name')->nullable();
+            $table->string('old_technology_version')->nullable();
             $table->string('technology_name')->nullable();
             $table->string('technology_version')->nullable();
             $table->timestamps();
