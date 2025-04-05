@@ -459,8 +459,78 @@ const handleUpdateDomain = async (e) => {
             alert("Une erreur s'est produite lors de l'envoi des données.");
         }
     };
+    const runDetectTechnologies = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/run-detect-technologies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+    
+        const result = await response.json();
+        console.log('Commande lancée :', result.message);
+        console.log('Sortie artisan :', result.output);
+      } catch (error) {
+        console.error('Erreur lors de l’exécution de la commande :', error);
+      }
+    };
+    const runDetectForDomain = async (domainId) => {
+      try {
+          const response = await fetch(`http://localhost:8000/api/run-detect-technologies/${domainId}`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+              },
+          });
+      
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+              throw new Error(result.message || 'Erreur inconnue');
+          }
+          
+          console.log('Commande lancée :', result.message);
+          console.log('Sortie artisan :', result.output);
+          
+          // You might want to show a success message to the user
+          alert(result.message);
+          
+      } catch (error) {
+          console.error('Erreur lors de lexécution de la commande :', error);
+          alert(`Erreur: ${error.message}`);
+      }
+  };
 
 
+  const runDetectStatusDomain = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/run-detect-statusDomain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      const result = await response.json();
+      console.log('Commande lancée :', result.message);
+      console.log('Sortie artisan :', result.output);
+  
+      // Show success notification
+      alert('Detection completed successfully! Refreshing data...');
+      
+      // Refresh page after 2 seconds (give time to see the message)
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+  
+    } catch (error) {
+      console.error('Erreur lors de l exécution de la commande :', error);
+      // Show error notification
+      alert(`Error: ${error.message}`);
+    }
+  };
   return (
     <>
       <Header />
@@ -490,6 +560,21 @@ const handleUpdateDomain = async (e) => {
                   <Button onClick={() => { setShowCSVForm(!showCSVForm); setShowForm(false); }} color="primary">
                     <i className="fas fa-file-csv mr-2" /> Import CSV
                   </Button>
+                 
+
+
+
+                  <UncontrolledDropdown>
+                                      <DropdownToggle caret color="secondary">
+                                        Detection
+                                      </DropdownToggle>
+                                      <DropdownMenu>
+                                        <DropdownItem onClick={runDetectTechnologies}><i className="fas fa-history text-purple mr-2" />Technology</DropdownItem>
+                                        <DropdownItem divider />
+                                          <DropdownItem onClick={runDetectStatusDomain}><i className="fas fa-fingerprint text-red mr-2" />Status Domains
+                                          </DropdownItem>
+                                      </DropdownMenu>
+                                    </UncontrolledDropdown>
                 </div>
               </CardHeader>
 
@@ -647,7 +732,7 @@ const handleUpdateDomain = async (e) => {
                             )}
                         </div>
                     )}              {/* Domains Table */}
-              <Table className="align-items-center table-flush" responsive>
+              <Table className="align-items-center table-flush text-center" responsive>
                 <thead className="thead-light">
                   <tr>
                     <th scope="col">Domain</th>
@@ -700,13 +785,16 @@ const handleUpdateDomain = async (e) => {
                             </DropdownToggle>
                             <DropdownMenu right>
                               <DropdownItem onClick={() => handleViewDomaine(domaine)}>
-                                <i className="fas fa-eye mr-2" /> View
+                               View
                               </DropdownItem>
                               <DropdownItem onClick={() => openEditModal(domaine)}>
-                                <i className="fas fa-edit mr-2" /> Edit
+                                 Edit
+                              </DropdownItem>
+                              <DropdownItem onClick={() => runDetectForDomain (domaine.id)}>
+                                 Detect Technology
                               </DropdownItem>
                               <DropdownItem onClick={() => handleDelete(domaine.id)}>
-                                <i className="fas fa-trash mr-2" /> Delete
+                                 Delete
                               </DropdownItem>
                             </DropdownMenu>
                           </UncontrolledDropdown>
@@ -845,11 +933,31 @@ const handleUpdateDomain = async (e) => {
       const techMap = {
         // Technologies mal supportées par Devicon
         'html': 'devicon-html5-plain',
-        'css': 'devicon-css3-plain',
-        'angular': 'devicon-angularjs-plain',
-        'c++': 'devicon-cplusplus-plain',
-        'c#': 'devicon-csharp-plain',
-        // Ajoutez d'autres cas spéciaux ici...
+    'css': 'devicon-css3-plain',
+    'javascript': 'devicon-javascript-plain',
+    'typescript': 'devicon-typescript-plain',
+    
+    // Frontend Frameworks
+    'vue.js': 'devicon-vuejs-plain',
+    'react': 'devicon-react-original',
+    'angular': 'devicon-angularjs-plain',
+    'svelte': 'devicon-svelte-plain',
+    
+    // Backend Technologies
+    'node': 'devicon-nodejs-plain',
+    'express': 'devicon-express-original',
+    'nestjs': 'devicon-nestjs-plain',
+    
+    // Programming Languages
+    'python': 'devicon-python-plain',
+    'java': 'devicon-java-plain',
+    'c': 'devicon-c-plain',
+    'c++': 'devicon-cplusplus-plain',
+    'c#': 'devicon-csharp-plain',
+    'go': 'devicon-go-plain',
+    'rust': 'devicon-rust-plain',
+    'php': 'devicon-php-plain',
+    'ruby': 'devicon-ruby-plain',
       };
 
       const normalizedName = techName

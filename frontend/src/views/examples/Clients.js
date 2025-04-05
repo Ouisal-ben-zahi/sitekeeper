@@ -442,7 +442,7 @@ const Clients = () => {
                                 </div>
                             )}
 
-                            <Table className="align-items-center table-flush" responsive>
+                            <Table className="align-items-center table-flush text-center" responsive>
                                 <thead className="thead-light">
                                     <tr>
                                         <th scope="col">Company</th>

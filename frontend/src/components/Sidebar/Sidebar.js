@@ -218,7 +218,7 @@ const Sidebar = (props) => {
                 onClick={closeCollapse}
                 activeClassName="active"
               >
-                <i className="ni ni-bullet-list-67 text-red" />
+              <i className="fas fa-history " />
                 History Technology
               </NavLink>
             </NavItem>
