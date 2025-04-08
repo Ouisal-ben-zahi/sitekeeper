@@ -21,10 +21,10 @@ import {
     Badge,
     Table
 } from "reactstrap";
-import UserHeader from "components/Headers/UserHeader.js";
 import classnames from "classnames";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Header from "components/Headers/Header";
 
 // Configuration de l'API
 const API_BASE_URL = "http://127.0.0.1:8000/api";
@@ -33,7 +33,7 @@ const ClientProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("informations");
-    const [editMode, setEditMode] = useState(false);
+    const [editMode, setEditMode] = useState(true);
     const [clientData, setClientData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -189,7 +189,7 @@ const ClientProfile = () => {
             });
         }
         setErrors({});
-        setEditMode(false);
+        setEditMode(true);
     };
 
     if (loading) {
@@ -238,7 +238,7 @@ const ClientProfile = () => {
 
     return (
         <>
-            <UserHeader />
+      <Header/>
             <Container className="mt--7" fluid>
                 <Row>
                     <Col className="order-xl-1" xl="12">
@@ -256,15 +256,10 @@ const ClientProfile = () => {
                                             size="sm"
                                             disabled={isSubmitting}
                                         >
-                                            {editMode ? (
-                                                <>
-                                                    <i className="fas fa-times mr-1" /> Cancel
-                                                </>
-                                            ) : (
+                                            
                                                 <>
                                                     <i className="fas fa-edit mr-1" /> Edit
                                                 </>
-                                            )}
                                         </Button>
                                     </Col>
                                 </Row>
@@ -469,53 +464,7 @@ const ClientProfile = () => {
                                                     </div>
                                                 </>
                                             ) : (
-                                                <>
-                                                    <div className="pl-lg-4">
-                                                        <Row>
-                                                            <Col md="6">
-                                                                <h6 className="heading-small text-muted mb-4">Company Information</h6>
-                                                                <div className="client-info-grid">
-                                                                    <div className="info-label">Company Name:</div>
-                                                                    <div className="info-value">{clientData.nom_entreprise}</div>
-
-                                                                    <div className="info-label">ICE:</div>
-                                                                    <div className="info-value">{clientData.ice}</div>
-
-                                                                    <div className="info-label">City:</div>
-                                                                    <div className="info-value">{clientData.ville}</div>
-
-                                                                    <div className="info-label">Postal Code:</div>
-                                                                    <div className="info-value">{clientData.code_postal}</div>
-
-                                                                    {clientData.adresse && (
-                                                                        <>
-                                                                            <div className="info-label">Address:</div>
-                                                                            <div className="info-value">{clientData.adresse}</div>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </Col>
-                                                            <Col md="6">
-                                                                <h6 className="heading-small text-muted mb-4">Contact Information</h6>
-                                                                <div className="client-info-grid">
-                                                                    <div className="info-label">Manager:</div>
-                                                                    <div className="info-value">{clientData.nom_responsable}</div>
-
-                                                                    <div className="info-label">Phone:</div>
-                                                                    <div className="info-value">{clientData.tel_responsable}</div>
-
-                                                                    <div className="info-label">Email:</div>
-                                                                    <div className="info-value">
-                                                                        <a href={`mailto:${clientData.email_responsable}`}>
-                                                                            {clientData.email_responsable}
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            </Col>
-                                                        </Row>
-                                                    </div>
-                                                </>
-                                            )}
+<></>                                            )}
                                         </Form>
                                     </TabPane>
                                     <TabPane tabId="domains">
