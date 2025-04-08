@@ -35,7 +35,7 @@ const UserProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("informations");
-    const [editMode, setEditMode] = useState(false);
+    const [editMode, setEditMode] = useState(true);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -167,7 +167,7 @@ const UserProfile = () => {
 
             // Mise à jour des données locales
             setUserData(data.user);
-            setEditMode(false);
+            setEditMode(true);
             toast.success("User updated successfully!");
 
         } catch (err) {
@@ -192,7 +192,7 @@ const UserProfile = () => {
             });
         }
         setErrors({});
-        setEditMode(false);
+        setEditMode(true);
     };
 
     const getRoleBadge = (role) => {
@@ -273,15 +273,11 @@ const UserProfile = () => {
                                             size="sm"
                                             disabled={isSubmitting}
                                         >
-                                            {editMode ? (
-                                                <>
-                                                    <FaTimes className="mr-1" /> Cancel
-                                                </>
-                                            ) : (
+                                            
                                                 <>
                                                     <FaEdit className="mr-1" /> Edit
                                                 </>
-                                            )}
+                                      
                                         </Button>
                                     </Col>
                                 </Row>
