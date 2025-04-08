@@ -464,7 +464,7 @@ const handleUpdateDomain = async (e) => {
         }
     };
     const runDetectTechnologies = async () => {
-      alert ('ok')
+      alert ('Detection des Technologies Des Tous Domaines.')
       try {
         const response = await fetch('http://localhost:8000/api/run-detect-technologies', {
           method: 'POST',
@@ -508,7 +508,29 @@ const handleUpdateDomain = async (e) => {
       }
   };
 
-
+  function isExpiringSoon(expirationDate, monthsThreshold) {
+    if (!expirationDate) return false;
+    
+    const expDate = new Date(expirationDate);
+    const now = new Date();
+    const thresholdDate = new Date();
+    thresholdDate.setMonth(now.getMonth() + monthsThreshold);
+    
+    // Vérifie si la date est dans la période ou si c'est le mois courant
+    return expDate > now && expDate <= thresholdDate;
+  }
+  
+  function isExpiredOrCurrentMonth(expirationDate) {
+    if (!expirationDate) return false;
+    
+    const expDate = new Date(expirationDate);
+    const now = new Date();
+    
+    // Vérifie si expiré ou si c'est le même mois/année
+    return expDate <= now || 
+           (expDate.getMonth() === now.getMonth() && 
+            expDate.getFullYear() === now.getFullYear());
+  }
   const runDetectStatusDomain = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/run-detect-statusDomain', {
@@ -579,7 +601,7 @@ const handleUpdateDomain = async (e) => {
                                           <DropdownItem onClick={runDetectStatusDomain}><i className="fas fa-fingerprint text-red mr-2" />Status Domains
                                           </DropdownItem>
                                       </DropdownMenu>
-                                    </UncontrolledDropdown>
+                  </UncontrolledDropdown>
                 </div>
               </CardHeader>
 
@@ -719,14 +741,22 @@ const handleUpdateDomain = async (e) => {
                           </Badge>
                         </td>
                         <td>
-                          {sslCert ? (
-                            <Badge color={sslCert.statut === 'valide' ? 'success' : 'warning'} pill>
-                              {sslCert.statut}
-                            </Badge>
-                          ) : (
-                            <Badge color="secondary" pill>None</Badge>
-                          )}
-                        </td>
+  {sslCert ? (
+    <Badge 
+      color={
+        isExpiredOrCurrentMonth(sslCert.date_expiration) ? 'danger' : // Rouge si expiré ou ce mois-ci
+        sslCert.statut === 'valide' && isExpiringSoon(sslCert.date_expiration, 3) ? 'success' : // Vert si <3 mois
+        sslCert.statut === 'valide' ? 'primary' : // Bleu pour valide
+        'warning' // Orange pour autres cas invalides
+      } 
+      pill
+    >
+      {sslCert.date_expiration}
+    </Badge>
+  ) : (
+    <Badge color="secondary" pill>Aucun</Badge>
+  )}
+</td>
                         <td className="text-right">
                           <UncontrolledDropdown>
                             <DropdownToggle
