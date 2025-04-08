@@ -64,6 +64,7 @@ const DomainName = () => {
   const [filteredDomaines, setFilteredDomaines] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   
+  
   // Form states
   const [formData, setFormData] = useState({
     nom_domaine: '',
@@ -88,11 +89,14 @@ const DomainName = () => {
 
   // Validation schema
   const schema = yup.object().shape({
-    nom_domaine: yup.string()
-      .required("Domain name is required")
-      .matches(/^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/, "Must be a valid domain (e.g. example.com)"),
-    date_expiration: yup.date().required("Expiration date is required"),
-    statut: yup.string().required("Status is required"),
+    nom_domaine: yup
+      .string()
+      .required("Le nom de domaine est requis")
+      .matches(
+        /^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/,
+        "Doit être un domaine valide (ex: example.com)"
+      ),
+    statut: yup.string().required("Le statut est requis"),
   });
 
   // Fetch data
@@ -460,6 +464,7 @@ const handleUpdateDomain = async (e) => {
         }
     };
     const runDetectTechnologies = async () => {
+      alert ('ok')
       try {
         const response = await fetch('http://localhost:8000/api/run-detect-technologies', {
           method: 'POST',
@@ -595,17 +600,7 @@ const handleUpdateDomain = async (e) => {
                           />
                           {errors.nom_domaine && <small className="text-danger">{errors.nom_domaine}</small>}
                         </FormGroup>
-                        <FormGroup>
-                          <Label>Expiration Date*</Label>
-                          <Input
-                            type="date"
-                            name="date_expiration"
-                            value={formData.date_expiration}
-                            onChange={handleInputChange}
-                            invalid={!!errors.date_expiration}
-                          />
-                          {errors.date_expiration && <small className="text-danger">{errors.date_expiration}</small>}
-                        </FormGroup>
+                        
                       </Col>
                       <Col md="6">
                         <FormGroup>
@@ -622,15 +617,7 @@ const handleUpdateDomain = async (e) => {
                             ))}
                           </Input>
                         </FormGroup>
-                        <FormGroup>
-                          <Label>SSL Expiration</Label>
-                          <Input
-                            type="date"
-                            name="date_expirationSsl"
-                            value={formData.date_expirationSsl}
-                            onChange={handleInputChange}
-                          />
-                        </FormGroup>
+                        
                       </Col>
                     </Row>
                     <div className="d-flex justify-content-between">
@@ -656,31 +643,14 @@ const handleUpdateDomain = async (e) => {
                                     <h4>Imported Domains:</h4>
                                     <form onSubmit={HandleSubmitDataCsv}>
                                         {csvData.map((domain, index) => (
-                                            <div key={index} className="domain-row mb-4 p-3 border rounded">
+                                            <div key={index} className="domain-row mb-4 p-3 text-center border rounded">
                                                 <div className="mb-2">
                                                     <label className="font-weight-bold">{domain.nom_domaine}</label>
                                                 </div>
                                                 <div className="d-flex justify-content-between align-items-center flex-wrap">
+                                                    
                                                     <div className="mb-2 flex-grow-1 me-2">
-                                                        <label>Domain Expiration:</label>
-                                                        <input
-                                                            type="date"
-                                                            onChange={(e) => {
-                                                                setDomainCsv((prev) => {
-                                                                    const newDomain = [...prev];
-                                                                    newDomain[index] = {
-                                                                        ...newDomain[index],
-                                                                        date_expiration: e.target.value,
-                                                                    };
-                                                                    return newDomain;
-                                                                });
-                                                            }}
-                                                            className="w-full px-2 py-1 border rounded"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="mb-2 flex-grow-1 me-2">
-                                                        <label>Select Client:</label>
+                                                        <label>Select Client :  </label>
                                                         <select
                                                             name="client_id"
                                                             onChange={(e) => {
@@ -693,7 +663,7 @@ const handleUpdateDomain = async (e) => {
                                                                     return newDomain;
                                                                 });
                                                             }}
-                                                            className="w-full px-2 py-1 border rounded"
+                                                            className="w-full px-2 py-1 col-4 border rounded"
                                                         >
                                                             <option value="">Choose a Client</option>
                                                             {domainClient.map((client) => (
@@ -703,24 +673,7 @@ const handleUpdateDomain = async (e) => {
                                                             ))}
                                                         </select>
                                                     </div>
-                                                    <div className="mb-2 flex-grow-1 me-2">
-                                                        <label>SSL Expiration:</label>
-                                                        <input
-                                                            type="date"
-                                                            onChange={(e) => {
-                                                                setDomainCsv((prev) => {
-                                                                    const newDomain = [...prev];
-                                                                    newDomain[index] = {
-                                                                        ...newDomain[index],
-                                                                        date_expirationSsl: e.target.value,
-                                                                    };
-                                                                    return newDomain;
-                                                                });
-                                                            }}
-                                                            className="w-full px-2 py-1 border rounded"
-                                                            required
-                                                        />
-                                                    </div>
+                                                    
                                                     
                                                   
                                                 </div>
@@ -784,19 +737,19 @@ const handleUpdateDomain = async (e) => {
                               <i className="fas fa-ellipsis-v" />
                             </DropdownToggle>
                             <DropdownMenu right>
-                              <DropdownItem onClick={() => handleViewDomaine(domaine)}>
-                               View
-                              </DropdownItem>
-                              <DropdownItem onClick={() => openEditModal(domaine)}>
-                                 Edit
-                              </DropdownItem>
-                              <DropdownItem onClick={() => runDetectForDomain (domaine.id)}>
-                                 Detect Technology
-                              </DropdownItem>
-                              <DropdownItem onClick={() => handleDelete(domaine.id)}>
-                                 Delete
-                              </DropdownItem>
-                            </DropdownMenu>
+                            <DropdownItem onClick={() => handleViewDomaine(domaine)}>
+                              <i className="fas fa-eye mr-2"></i> View
+                            </DropdownItem>
+                            <DropdownItem onClick={() => openEditModal(domaine)}>
+                              <i className="fas fa-edit mr-2"></i> Edit
+                            </DropdownItem>
+                            <DropdownItem onClick={() => runDetectForDomain(domaine.id)}>
+                              <i className="fas fa-search mr-2"></i> Detect Technology
+                            </DropdownItem>
+                            <DropdownItem onClick={() => handleDelete(domaine.id)}>
+                              <i className="fas fa-trash mr-2"></i> Delete
+                            </DropdownItem>
+                          </DropdownMenu>
                           </UncontrolledDropdown>
                         </td>
                       </tr>

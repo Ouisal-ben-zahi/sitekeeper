@@ -1,13 +1,17 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Domaine;
 use App\Models\Client;
 use App\Models\CertificatSSL;
 use App\Models\ContratMaintenance;
 use Illuminate\Http\Request;
-use Illuminate\Http\Technologie;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client as GuzzleClient;
+
 class DomainController extends Controller
 {
     /**
@@ -26,35 +30,221 @@ class DomainController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        // Validation des données
-        $request->validate([
-            'nom_domaine' => 'required|string|max:255|unique:domaines,nom_domaine', // Assure que le nom de domaine est unique
-            'date_expiration' => 'required|date', // Validation de la date
-            'statut' => 'required|in:actif,inactif,expiré', // Validation de l'enum
-            'client_id' => 'required|exists:clients,id', // Vérifie que le client existe
-            'date_expirationSsl' => 'required|date|after_or_equal:today', // Validation de la date d'expiration du certificat SSL
+{
+    $validated = $request->validate([
+        'nom_domaine' => 'required|string|max:255|unique:domaines,nom_domaine',
+        'client_id' => 'required|exists:clients,id'
+    ]);
 
-    ]);    
-        // Création du domaine
-        $domaine = Domaine::create([
-            'nom_domaine' => $request->nom_domaine, // Correction du nom du champ
-            'date_expiration' => $request->date_expiration, // Correction du nom du champ
-            'statut' => 'actif', // Correction du nom du champ
-            'client_id' => $request->client_id,
+    $domain = $this->normalizeDomain($validated['nom_domaine']);
+    $domainExpiration = $this->fetchDomainExpiration($domain);
+    $sslExpiration = $this->fetchSSLExpiration($domain) ?? $validated['date_expiration_ssl'] ?? null;
+
+    $domaine = Domaine::create([
+        'nom_domaine' => $validated['nom_domaine'],
+        'date_expiration' => $domainExpiration,
+        'client_id' => $validated['client_id'],
+        'statut' => 'actif',
+    ]);
+
+    $certificatSsl = CertificatSSL::create([
+        'domaine_id' => $domaine->id,
+        'date_expiration' => $sslExpiration,
+        'statut' => 'valide',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'domaine' => $domaine,
+            'certificat_ssl' => $certificatSsl
+        ],
+        'meta' => [
+            'expiration_source' => $domainExpiration === now()->addYear()->format('Y-m-d') ? 'default' : 'api',
+            'domain_checked' => $domain
+        ]
+    ], 201);
+}
+private function fetchSSLExpiration(string $domain): ?string
+{
+    try {
+        // Essayer d'abord avec l'API SSL Labs
+        $sslExpiration = $this->trySSLLabsApi($domain);
+        if ($sslExpiration) {
+            return $sslExpiration;
+        }
+
+        // Si SSL Labs ne fonctionne pas, essayer une vérification OpenSSL locale
+        return $this->tryLocalOpenSSL($domain);
+    } catch (\Exception $e) {
+        \Log::error("SSL expiration check failed for {$domain}: " . $e->getMessage());
+        return null;
+    }
+}
+
+private function trySSLLabsApi(string $domain): ?string
+{
+    try {
+        $client = new \GuzzleHttp\Client([
+            'timeout' => 15,
+            'verify' => false
         ]);
-        // Création du certificat SSL
-        $certificatSsl = CertificatSSL::create([
-            'domaine_id' => $domaine->id,
-            'date_expiration' => $request->date_expirationSsl,
-            'statut' => 'valide',
+
+        // Analyse initiale
+        $response = $client->get("https://api.ssllabs.com/api/v3/analyze", [
+            'query' => [
+                'host' => $domain,
+                'all' => 'done',
+                'publish' => 'off'
+            ]
         ]);
-        
-        
-          // Retourner une réponse JSON
-        return response()->json(['domaine' => $domaine, 'message' => 'Domaine créé avec succès'], 201);
+
+        $data = json_decode($response->getBody(), true);
+
+        if (isset($data['endpoints'][0]['details']['cert']['notAfter'])) {
+            return Carbon::parse($data['endpoints'][0]['details']['cert']['notAfter'])->format('Y-m-d');
+        }
+
+        \Log::warning("No SSL expiration found in SSL Labs response for {$domain}");
+        return null;
+    } catch (\Exception $e) {
+        \Log::error("SSL Labs API error for {$domain}: " . $e->getMessage());
+        return null;
+    }
+}
+
+private function tryLocalOpenSSL(string $domain): ?string
+{
+    try {
+        $g = stream_context_create([
+            "ssl" => [
+                "capture_peer_cert" => true,
+                "verify_peer" => false,
+                "verify_peer_name" => false,
+            ]
+        ]);
+
+        $r = stream_socket_client(
+            "ssl://{$domain}:443",
+            $errno,
+            $errstr,
+            30,
+            STREAM_CLIENT_CONNECT,
+            $g
+        );
+
+        if (!$r) {
+            \Log::warning("Failed to connect to {$domain}:443 for SSL check");
+            return null;
+        }
+
+        $cont = stream_context_get_params($r);
+        $certInfo = openssl_x509_parse($cont["options"]["ssl"]["peer_certificate"]);
+
+        if (isset($certInfo['validTo_time_t'])) {
+            return Carbon::createFromTimestamp($certInfo['validTo_time_t'])->format('Y-m-d');
+        }
+    } catch (\Exception $e) {
+        \Log::error("Local SSL check failed for {$domain}: " . $e->getMessage());
     }
 
+    return null;
+}
+
+
+private function normalizeDomain(string $domain): string
+{
+    $domain = strtolower(trim($domain));
+    $domain = preg_replace('/^(https?:\/\/)?(www\.)?/', '', $domain);
+    return explode('/', $domain)[0];
+}
+
+private function fetchDomainExpiration(string $domain): string
+{
+    $sources = [
+        fn($d) => $this->tryWhoisFreaksApi($d),
+        fn($d) => $this->tryLocalWhoisCommand($d)
+    ];
+
+    foreach ($sources as $source) {
+        if ($expiration = $source($domain)) {
+            return $expiration;
+        }
+    }
+
+    return now()->addYear()->format('Y-m-d');
+}
+
+private function tryWhoisFreaksApi(string $domain): ?string
+{
+    try {
+        $client = new \GuzzleHttp\Client([
+            'timeout' => 8,
+            'verify' => false // Désactive la vérification SSL pour les environnements de test
+        ]);
+
+        $response = $client->get('https://api.whoisfreaks.com/v1.0/whois', [
+            'query' => [
+                'whois' => 'live',
+                'domainName' => $domain,
+                'apiKey' => '77b87cc71b51481c9cdf91ad67f3edb8'
+            ]
+        ]);
+
+        $data = json_decode($response->getBody(), true);
+
+        \Log::debug('WhoisFreaks API Response', ['domain' => $domain, 'response' => $data]);
+
+        // Gestion du format JSON spécifique
+        if (isset($data['expiry_date'])) {
+            return Carbon::parse($data['expiry_date'])->format('Y-m-d');
+        }
+
+        if (isset($data['whois_domain_expiry_date'])) {
+            return Carbon::parse($data['whois_domain_expiry_date'])->format('Y-m-d');
+        }
+
+        // Vérification des formats alternatifs
+        $dateKeys = ['expiry_date', 'expiration_date', 'registry_expiry_date', 'expires'];
+        foreach ($dateKeys as $key) {
+            if (isset($data[$key])) {
+                return Carbon::parse($data[$key])->format('Y-m-d');
+            }
+        }
+
+        \Log::warning('No expiration date found in WhoisFreaks response', ['domain' => $domain]);
+    } catch (\Exception $e) {
+        \Log::error('WhoisFreaks API error: ' . $e->getMessage(), ['domain' => $domain]);
+    }
+
+    return null;
+}
+
+private function tryLocalWhoisCommand(string $domain): ?string
+{
+    try {
+        $output = shell_exec("whois $domain");
+        
+        // Patterns pour détecter la date d'expiration dans la sortie whois
+        $patterns = [
+            '/expir(y|ation) date:\s+(.+)/i',
+            '/registrar registration expiration date:\s+(.+)/i',
+            '/expires:\s+(.+)/i',
+            '/expire on:\s+(.+)/i'
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $output, $matches)) {
+                $dateStr = trim($matches[2] ?? $matches[1]);
+                return Carbon::parse($dateStr)->format('Y-m-d');
+            }
+        }
+    } catch (\Exception $e) {
+        \Log::error('Local whois command failed: ' . $e->getMessage());
+    }
+
+    return null;
+}
     /**
      * Display the specified resource.
      */
@@ -121,55 +311,72 @@ class DomainController extends Controller
 
     public function import(Request $request)
     {
-        // Valider les données reçues
+        // Validate the input data
         $validator = Validator::make($request->all(), [
             '*.nom_domaine' => 'required|string|unique:domaines,nom_domaine',
-            '*.client_id' => 'required|exists:clients,id', // Vérifie que le client existe
-            '*.date_expiration' => 'required|date',
-            '*.date_expirationSsl' => 'required|date',
-            '*.statut' => 'sometimes|string|in:actif,inactif,expiré', // Optionnel
+            '*.client_id' => 'required|exists:clients,id',
+            '*.statut' => 'sometimes|string|in:actif,inactif,expiré',
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
-                'message' => 'Erreur de validation',
+                'message' => 'Validation error',
                 'errors' => $validator->errors(),
-            ], 422); // Code HTTP 422 : Unprocessable Entity
+            ], 422);
         }
-    
-        // Récupérer les données validées
-        $domaines = $request->all();
-    
-        // Enregistrer les domaines dans la base de données
-        try {
-            foreach ($domaines as $domaine) {
-                // Création du domaine
-                $nouveauDomaine = Domaine::create([
-                    'nom_domaine' => $domaine['nom_domaine'],
-                    'client_id' => $domaine['client_id'],
-                    'date_expiration' => $domaine['date_expiration'],
-                    'statut' => $domaine['statut'] ?? 'actif', // Par défaut "actif"
-                ]);
-    
-                // Création du certificat SSL
-                CertificatSSL::create([
-                    'domaine_id' => $nouveauDomaine->id,
-                    'date_expiration' => $domaine['date_expirationSsl'],
-                    'statut' => 'valide',
-                ]);
-    
+
+        $domains = $request->all();
+        $imported = [];
+        $failed = [];
+
+        foreach ($domains as $domainData) {
+            try {
+                $domain = $this->normalizeDomain($domainData['nom_domaine']);
                 
+                // Get domain expiration (try API first, then fallback to whois)
+                $domainExpiration = $this->fetchDomainExpiration($domain);
+                
+                // Get SSL expiration (try API first, then fallback to local check)
+                $sslExpiration = $this->fetchSSLExpiration($domain);
+
+                // Create domain record
+                $newDomain = Domaine::create([
+                    'nom_domaine' => $domainData['nom_domaine'],
+                    'client_id' => $domainData['client_id'],
+                    'date_expiration' => $domainExpiration,
+                    'statut' => $domainData['statut'] ?? 'actif',
+                ]);
+
+                // Create SSL certificate record
+                $sslCert = CertificatSSL::create([
+                    'domaine_id' => $newDomain->id,
+                    'date_expiration' => $sslExpiration,
+                    'statut' => $sslExpiration ? 'valide' : 'inconnu',
+                ]);
+
+                $imported[] = [
+                    'domain' => $newDomain,
+                    'ssl_cert' => $sslCert,
+                    'expiration_source' => [
+                        'domain' => $domainExpiration === now()->addYear()->format('Y-m-d') ? 'default' : 'external',
+                        'ssl' => $sslExpiration ? 'detected' : 'not_detected'
+                    ]
+                ];
+            } catch (\Exception $e) {
+                $failed[] = [
+                    'domain' => $domainData['nom_domaine'],
+                    'error' => $e->getMessage()
+                ];
+                Log::error("Domain import failed for {$domainData['nom_domaine']}: " . $e->getMessage());
             }
-    
-            return response()->json([
-                'message' => 'Domaines importés avec succès',
-                'count' => count($domaines),
-            ], 201); // Code HTTP 201 : Created
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de l\'importation des domaines',
-                'error' => $e->getMessage(),
-            ], 500); // Code HTTP 500 : Internal Server Error
         }
+
+        return response()->json([
+            'message' => 'Import completed',
+            'imported_count' => count($imported),
+            'failed_count' => count($failed),
+            'imported' => $imported,
+            'failed' => $failed,
+        ], count($failed) === 0 ? 201 : 207); // 207 Multi-Status if some failed
     }
 }
