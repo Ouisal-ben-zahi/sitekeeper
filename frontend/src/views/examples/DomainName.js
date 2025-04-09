@@ -64,6 +64,9 @@ const DomainName = () => {
   const [filteredDomaines, setFilteredDomaines] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -82,7 +85,7 @@ const DomainName = () => {
   const [selectedDomaine, setSelectedDomaine] = useState(null);
   const [activeTab, setActiveTab] = useState("1");
   const [activeModalTab, setActiveModalTab] = useState("details");
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -152,6 +155,7 @@ const DomainName = () => {
         domaine.statut.toLowerCase().includes(term)
     );
     setFilteredDomaines(filtered);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
   // Form handlers
@@ -164,50 +168,49 @@ const DomainName = () => {
     }
   };
 
- // Soumission du formulaire
-// Soumission du formulaire
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    // Valider les champs requis
-    await schema.validate(formData, { abortEarly: false });
+  // Soumission du formulaire
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true); 
+    try {
+      await schema.validate(formData, { abortEarly: false });
 
-    const response = await fetch(`${API_BASE_URL}/domaines`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    const result = await response.json();
-    
-    if (response.ok) {
-      toast.success(result.message || "Domain added successfully");
-      resetForm();
-      await fetchData(); // Recharger les données
-    } else {
-      if (response.status === 422) {
-        setErrors(result.errors || {});
-      } else {
-        throw new Error(result.message || "Failed to add domain");
-      }
-    }
-  } catch (error) {
-    if (error instanceof yup.ValidationError) {
-      const newErrors = {};
-      error.inner.forEach((err) => {
-        newErrors[err.path] = err.message;
+      const response = await fetch(`${API_BASE_URL}/domaines`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-      setErrors(newErrors);
-    } else {
-      console.error("Error submitting form:", error);
-      toast.error(error.message || "An error occurred while submitting the form");
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast.success(result.message || "Domain added successfully");
+        resetForm();
+        await fetchData();
+      } else {
+        if (response.status === 422) {
+          setErrors(result.errors || {});
+        } else {
+          throw new Error(result.message || "Failed to add domain");
+        }
+      }
+    } catch (error) {
+      if (error instanceof yup.ValidationError) {
+        const newErrors = {};
+        error.inner.forEach((err) => {
+          newErrors[err.path] = err.message;
+        });
+        setErrors(newErrors);
+      } else {
+        console.error("Error submitting form:", error);
+        toast.error(error.message || "An error occurred while submitting the form");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-  }
-};
+  };
 
-
-
-const handleUpdateDomain = async (e) => {
+  const handleUpdateDomain = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     
@@ -290,6 +293,10 @@ const handleUpdateDomain = async (e) => {
       if (response.ok) {
         toast.success("Domain deleted successfully");
         await fetchData();
+        // Adjust current page if last item on page was deleted
+        if (filteredDomaines.length % itemsPerPage === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
       } else {
         throw new Error("Failed to delete domain");
       }
@@ -333,6 +340,7 @@ const handleUpdateDomain = async (e) => {
 
   const handleSubmitDataCsv = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     try {
       const response = await fetch(`${API_BASE_URL}/domaines/import`, {
@@ -352,6 +360,8 @@ const handleUpdateDomain = async (e) => {
       }
     } catch (error) {
       toast.error(error.message || "An error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -377,137 +387,36 @@ const handleUpdateDomain = async (e) => {
     if (activeModalTab !== tab) setActiveModalTab(tab);
   };
 
-  if (isLoading && !domaines.length) {
-    return (
-      <div className="text-center py-5">
-        <Spinner color="primary" />
-        <p className="mt-2">Loading domains...</p>
-      </div>
-    );
-  }
-
-      // Gestion de l'importation CSV
-      const HandleDataCsv = (e) => {
-        const file = e.target.files[0];
-    
-        if (file) {
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: (results) => {
-                    if (results.data && results.data.length > 0) {
-                        const domaines = results.data
-                            .map((row) => {
-                                if (!row.nom_domaine) {
-                                    console.warn("La colonne 'nom_domaine' est manquante ou vide dans une ligne.");
-                                    return null;
-                                }
-                                return {
-                                    nom_domaine: row.nom_domaine.trim(),
-                                    date_expiration: row.date_expiration || "",
-                                    client_id: row.client_id || "",
-                                };
-                            })
-                            .filter(Boolean);
-                        setCsvData(domaines);
-                        setDomainCsv(domaines);
-                        console.log("Domaines importés :", domaines);
-                    } else {
-                        console.warn("Le fichier CSV est vide ou mal formaté.");
-                        alert("Le fichier CSV est vide ou mal formaté.");
-                    }
-                },
-                error: (error) => {
-                    console.error("Erreur lors de la lecture du fichier CSV :", error);
-                    alert("Erreur lors de la lecture du fichier CSV. Assurez-vous que le fichier est valide.");
-                },
-            });
-        } else {
-            console.warn("Aucun fichier sélectionné.");
-            alert("Veuillez sélectionner un fichier CSV.");
-        }
-    };
-
-    // Envoie des données CSV à la BD
-    const HandleSubmitDataCsv = async (e) => {
-        e.preventDefault();
-        console.log("Données à envoyer :", domaineCsv);
-    
-        try {
-            const response = await fetch("http://127.0.0.1:8000/api/domaines/import", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(domaineCsv),
-            });
-    
-            const result = await response.json();
-    
-            if (response.ok) {
-                alert("Données envoyées avec succès !");
-                // Recharger les données après l'importation
-                fetch("http://127.0.0.1:8000/api/domaines")
-                    .then((response) => response.json())
-                    .then((data) => {
-                        setDomaines(data.domaines);
-                        setFilteredDomaines(data.domaines);
-                        setDomainClient(data.clientes);
-                    })
-                    .catch((error) => console.error("Erreur lors de la récupération des domaines :", error));
-            } else {
-                alert("Erreur lors de l'envoi des données : " + result.message);
-            }
-        } catch (err) {
-            console.error("Erreur lors de l'envoi des données :", err);
-            alert("Une erreur s'est produite lors de l'envoi des données.");
-        }
-    };
-    const runDetectTechnologies = async () => {
-      alert ('Detection des Technologies Des Tous Domaines.')
-      try {
-        const response = await fetch('http://localhost:8000/api/run-detect-technologies', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-    
-        const result = await response.json();
-        console.log('Commande lancée :', result.message);
-        console.log('Sortie artisan :', result.output);
-      } catch (error) {
-        console.error('Erreur lors de l’exécution de la commande :', error);
-      }
-    };
-    const runDetectForDomain = async (domainId) => {
-      try {
-          const response = await fetch(`http://localhost:8000/api/run-detect-technologies/${domainId}`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-              },
-          });
-      
-          const result = await response.json();
-          
-          if (!response.ok || !result.success) {
-              throw new Error(result.message || 'Erreur inconnue');
-          }
-          
-          console.log('Commande lancée :', result.message);
-          console.log('Sortie artisan :', result.output);
-          
-          // You might want to show a success message to the user
-          alert(result.message);
-          
-      } catch (error) {
-          console.error('Erreur lors de lexécution de la commande :', error);
-          alert(`Erreur: ${error.message}`);
-      }
+  // Pagination functions
+  const paginate = (items, pageNumber, pageSize) => {
+    const startIndex = (pageNumber - 1) * pageSize;
+    return items.slice(startIndex, startIndex + pageSize);
   };
 
+  const currentItems = paginate(filteredDomaines, currentPage, itemsPerPage);
+
+  const pageNumbers = [];
+  for (let i = 1; i <= Math.ceil(filteredDomaines.length / itemsPerPage); i++) {
+    pageNumbers.push(i);
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < pageNumbers.length) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Expiration functions
   function isExpiringSoon(expirationDate, monthsThreshold) {
     if (!expirationDate) return false;
     
@@ -516,7 +425,6 @@ const handleUpdateDomain = async (e) => {
     const thresholdDate = new Date();
     thresholdDate.setMonth(now.getMonth() + monthsThreshold);
     
-    // Vérifie si la date est dans la période ou si c'est le mois courant
     return expDate > now && expDate <= thresholdDate;
   }
   
@@ -526,11 +434,56 @@ const handleUpdateDomain = async (e) => {
     const expDate = new Date(expirationDate);
     const now = new Date();
     
-    // Vérifie si expiré ou si c'est le même mois/année
     return expDate <= now || 
            (expDate.getMonth() === now.getMonth() && 
             expDate.getFullYear() === now.getFullYear());
   }
+
+  const runDetectTechnologies = async () => {
+    alert('Detection des Technologies Des Tous Domaines.')
+    try {
+      const response = await fetch('http://localhost:8000/api/run-detect-technologies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      const result = await response.json();
+      console.log('Commande lancée :', result.message);
+      console.log('Sortie artisan :', result.output);
+    } catch (error) {
+      console.error('Erreur lors de l exécution de la commande :', error);
+    }
+  };
+
+  const runDetectForDomain = async (domainId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/run-detect-technologies/${domainId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+      });
+  
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Erreur inconnue');
+      }
+      
+      console.log('Commande lancée :', result.message);
+      console.log('Sortie artisan :', result.output);
+      
+      alert(result.message);
+      
+    } catch (error) {
+      console.error('Erreur lors de lexécution de la commande :', error);
+      alert(`Erreur: ${error.message}`);
+    }
+  };
+
   const runDetectStatusDomain = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/run-detect-statusDomain', {
@@ -544,20 +497,27 @@ const handleUpdateDomain = async (e) => {
       console.log('Commande lancée :', result.message);
       console.log('Sortie artisan :', result.output);
   
-      // Show success notification
       alert('Detection completed successfully! Refreshing data...');
       
-      // Refresh page after 2 seconds (give time to see the message)
       setTimeout(() => {
         window.location.reload();
       }, 800);
   
     } catch (error) {
       console.error('Erreur lors de l exécution de la commande :', error);
-      // Show error notification
       alert(`Error: ${error.message}`);
     }
   };
+
+  if (isLoading && !domaines.length) {
+    return (
+      <div className="text-center py-5">
+        <Spinner color="primary" />
+        <p className="mt-2">Loading domains...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <Header />
@@ -588,19 +548,16 @@ const handleUpdateDomain = async (e) => {
                     <i className="fas fa-file-csv mr-2" /> Import CSV
                   </Button>
                  
-
-
-
                   <UncontrolledDropdown>
-                                      <DropdownToggle caret color="secondary">
-                                        Detection
-                                      </DropdownToggle>
-                                      <DropdownMenu>
-                                        <DropdownItem onClick={runDetectTechnologies}><i className="fas fa-history text-purple mr-2" />Technology</DropdownItem>
-                                        <DropdownItem divider />
-                                          <DropdownItem onClick={runDetectStatusDomain}><i className="fas fa-fingerprint text-red mr-2" />Status Domains
-                                          </DropdownItem>
-                                      </DropdownMenu>
+                    <DropdownToggle caret color="secondary">
+                      Detection
+                    </DropdownToggle>
+                    <DropdownMenu>
+                      <DropdownItem onClick={runDetectTechnologies}><i className="fas fa-history text-purple mr-2" />Technology</DropdownItem>
+                      <DropdownItem divider />
+                      <DropdownItem onClick={runDetectStatusDomain}><i className="fas fa-fingerprint text-red mr-2" />Status Domains
+                      </DropdownItem>
+                    </DropdownMenu>
                   </UncontrolledDropdown>
                 </div>
               </CardHeader>
@@ -644,69 +601,78 @@ const handleUpdateDomain = async (e) => {
                     </Row>
                     <div className="d-flex justify-content-between">
                       <Button color="secondary" onClick={resetForm}>Cancel</Button>
-                      <Button type="submit" color="primary">Save Domain</Button>
+                      <Button type="submit" color="primary"> {isSubmitting ? (
+    <>
+      <Spinner size="sm" className="mr-2" /> Saving...
+    </>
+  ) : (
+    'Save Domain'
+  )}</Button>
                     </div>
                   </Form>
                 </div>
               )}
 
-{/* Formulaire CSV */}
-{showCSVForm && (
-                        <div className="csv-form formClient container ">
-                            <h3>Import CSV File</h3>
-                            <input
-                                type="file"
-                                accept=".csv"
-                                onChange={HandleDataCsv}
-                                className="file-input mb-3"
-                            />
-                            {csvData.length > 0 && (
-                                <div className="imported-domains">
-                                    <h4>Imported Domains:</h4>
-                                    <form onSubmit={HandleSubmitDataCsv}>
-                                        {csvData.map((domain, index) => (
-                                            <div key={index} className="domain-row mb-4 p-3 text-center border rounded">
-                                                <div className="mb-2">
-                                                    <label className="font-weight-bold">{domain.nom_domaine}</label>
-                                                </div>
-                                                <div className="d-flex justify-content-between align-items-center flex-wrap">
-                                                    
-                                                    <div className="mb-2 flex-grow-1 me-2">
-                                                        <label>Select Client :  </label>
-                                                        <select
-                                                            name="client_id"
-                                                            onChange={(e) => {
-                                                                setDomainCsv((prev) => {
-                                                                    const newDomain = [...prev];
-                                                                    newDomain[index] = {
-                                                                        ...newDomain[index],
-                                                                        client_id: e.target.value,
-                                                                    };
-                                                                    return newDomain;
-                                                                });
-                                                            }}
-                                                            className="w-full px-2 py-1 col-4 border rounded"
-                                                        >
-                                                            <option value="">Choose a Client</option>
-                                                            {domainClient.map((client) => (
-                                                                <option key={client.id} value={client.id}>
-                                                                    {client.nom_entreprise}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    
-                                                    
-                                                  
-                                                </div>
-                                            </div>
-                                        ))}
-                                        <Button type="submit" className="mb-3" color="primary">Save Domains</Button>
-                                    </form>
-                                </div>
-                            )}
-                        </div>
-                    )}              {/* Domains Table */}
+              {/* Formulaire CSV */}
+              {showCSVForm && (
+                <div className="csv-form formClient container ">
+                  <h3>Import CSV File</h3>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleDataCsv}
+                    className="file-input mb-3"
+                  />
+                  {csvData.length > 0 && (
+                    <div className="imported-domains">
+                      <h4>Imported Domains:</h4>
+                      <form onSubmit={handleSubmitDataCsv}>
+                        {csvData.map((domain, index) => (
+                          <div key={index} className="domain-row mb-4 p-3 text-center border rounded">
+                            <div className="mb-2">
+                              <label className="font-weight-bold">{domain.nom_domaine}</label>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center flex-wrap">
+                              <div className="mb-2 flex-grow-1 me-2">
+                                <label>Select Client :  </label>
+                                <select
+                                  name="client_id"
+                                  onChange={(e) => {
+                                    setDomainCsv((prev) => {
+                                      const newDomain = [...prev];
+                                      newDomain[index] = {
+                                        ...newDomain[index],
+                                        client_id: e.target.value,
+                                      };
+                                      return newDomain;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 col-4 border rounded"
+                                >
+                                  <option value="">Choose a Client</option>
+                                  {domainClient.map((client) => (
+                                    <option key={client.id} value={client.id}>
+                                      {client.nom_entreprise}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button type="submit" className="mb-3" color="primary">{isSubmitting ? (
+    <>
+      <Spinner size="sm" className="mr-2" /> Saving...
+    </>
+  ) : (
+    'Save Domains'
+  )}</Button>
+                      </form>
+                    </div>
+                  )}
+                </div>
+              )}              
+              {/* Domains Table */}
               <Table className="align-items-center table-flush text-center" responsive>
                 <thead className="thead-light">
                   <tr>
@@ -719,7 +685,7 @@ const handleUpdateDomain = async (e) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDomaines.map((domaine) => {
+                  {currentItems.map((domaine) => {
                     const sslCert = getCertificatForDomaine(domaine.id);
                     return (
                       <tr key={domaine.id}>
@@ -741,22 +707,22 @@ const handleUpdateDomain = async (e) => {
                           </Badge>
                         </td>
                         <td>
-  {sslCert ? (
-    <Badge 
-      color={
-        isExpiredOrCurrentMonth(sslCert.date_expiration) ? 'danger' : // Rouge si expiré ou ce mois-ci
-        sslCert.statut === 'valide' && isExpiringSoon(sslCert.date_expiration, 3) ? 'success' : // Vert si <3 mois
-        sslCert.statut === 'valide' ? 'primary' : // Bleu pour valide
-        'warning' // Orange pour autres cas invalides
-      } 
-      pill
-    >
-      {sslCert.date_expiration}
-    </Badge>
-  ) : (
-    <Badge color="secondary" pill>Aucun</Badge>
-  )}
-</td>
+                          {sslCert ? (
+                            <Badge 
+                              color={
+                                isExpiredOrCurrentMonth(sslCert.date_expiration) ? 'danger' :
+                                sslCert.statut === 'valide' && isExpiringSoon(sslCert.date_expiration, 3) ? 'success' :
+                                sslCert.statut === 'valide' ? 'primary' :
+                                'warning'
+                              } 
+                              pill
+                            >
+                              {sslCert.date_expiration}
+                            </Badge>
+                          ) : (
+                            <Badge color="secondary" pill>Aucun</Badge>
+                          )}
+                        </td>
                         <td className="text-right">
                           <UncontrolledDropdown>
                             <DropdownToggle
@@ -767,19 +733,19 @@ const handleUpdateDomain = async (e) => {
                               <i className="fas fa-ellipsis-v" />
                             </DropdownToggle>
                             <DropdownMenu right>
-                            <DropdownItem onClick={() => handleViewDomaine(domaine)}>
-                              <i className="fas fa-eye mr-2"></i> View
-                            </DropdownItem>
-                            <DropdownItem onClick={() => openEditModal(domaine)}>
-                              <i className="fas fa-edit mr-2"></i> Edit
-                            </DropdownItem>
-                            <DropdownItem onClick={() => runDetectForDomain(domaine.id)}>
-                              <i className="fas fa-search mr-2"></i> Detect Technology
-                            </DropdownItem>
-                            <DropdownItem onClick={() => handleDelete(domaine.id)}>
-                              <i className="fas fa-trash mr-2"></i> Delete
-                            </DropdownItem>
-                          </DropdownMenu>
+                              <DropdownItem onClick={() => handleViewDomaine(domaine)}>
+                                <i className="fas fa-eye mr-2"></i> View
+                              </DropdownItem>
+                              <DropdownItem onClick={() => openEditModal(domaine)}>
+                                <i className="fas fa-edit mr-2"></i> Edit
+                              </DropdownItem>
+                              <DropdownItem onClick={() => runDetectForDomain(domaine.id)}>
+                                <i className="fas fa-search mr-2"></i> Detect Technology
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleDelete(domaine.id)}>
+                                <i className="fas fa-trash mr-2"></i> Delete
+                              </DropdownItem>
+                            </DropdownMenu>
                           </UncontrolledDropdown>
                         </td>
                       </tr>
@@ -803,22 +769,20 @@ const handleUpdateDomain = async (e) => {
               <CardFooter className="py-4">
                 <nav aria-label="Domains pagination">
                   <Pagination className="justify-content-end mb-0">
-                    <PaginationItem disabled>
-                      <PaginationLink previous tag="button">
+                    <PaginationItem disabled={currentPage === 1}>
+                      <PaginationLink previous tag="button" onClick={handlePrevPage}>
                         <i className="fas fa-angle-left" />
                       </PaginationLink>
                     </PaginationItem>
-                    <PaginationItem active>
-                      <PaginationLink tag="button">1</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink tag="button">2</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink tag="button">3</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink next tag="button">
+                    {pageNumbers.map(number => (
+                      <PaginationItem key={number} active={number === currentPage}>
+                        <PaginationLink tag="button" onClick={() => handlePageChange(number)}>
+                          {number}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem disabled={currentPage === pageNumbers.length}>
+                      <PaginationLink next tag="button" onClick={handleNextPage}>
                         <i className="fas fa-angle-right" />
                       </PaginationLink>
                     </PaginationItem>
@@ -832,10 +796,10 @@ const handleUpdateDomain = async (e) => {
 
       {/* Domain Details Modal */}
       <Modal isOpen={isModalOpen} toggle={() => setIsModalOpen(false)} size="lg" style={{
-    maxWidth: "800px",
-    width: "90%",
-  }}
-  contentClassName="min-vh-75">
+        maxWidth: "800px",
+        width: "90%",
+      }}
+      contentClassName="min-vh-75">
         <ModalHeader toggle={() => setIsModalOpen(false)}>
           Domain Details: {selectedDomaine?.nom_domaine}
         </ModalHeader>
@@ -910,70 +874,60 @@ const handleUpdateDomain = async (e) => {
                         </tr>
                       </thead>
                       <tbody>
-  {getTechnologiesForDomain(selectedDomaine.id).map((tech) => {
-    // 1. Normalisation du nom pour Devicon + cas particuliers
-    const getTechIconClass = (techName) => {
-      const techMap = {
-        // Technologies mal supportées par Devicon
-        'html': 'devicon-html5-plain',
-    'css': 'devicon-css3-plain',
-    'javascript': 'devicon-javascript-plain',
-    'typescript': 'devicon-typescript-plain',
-    
-    // Frontend Frameworks
-    'vue.js': 'devicon-vuejs-plain',
-    'react': 'devicon-react-original',
-    'angular': 'devicon-angularjs-plain',
-    'svelte': 'devicon-svelte-plain',
-    
-    // Backend Technologies
-    'node': 'devicon-nodejs-plain',
-    'express': 'devicon-express-original',
-    'nestjs': 'devicon-nestjs-plain',
-    
-    // Programming Languages
-    'python': 'devicon-python-plain',
-    'java': 'devicon-java-plain',
-    'c': 'devicon-c-plain',
-    'c++': 'devicon-cplusplus-plain',
-    'c#': 'devicon-csharp-plain',
-    'go': 'devicon-go-plain',
-    'rust': 'devicon-rust-plain',
-    'php': 'devicon-php-plain',
-    'ruby': 'devicon-ruby-plain',
-      };
+                        {getTechnologiesForDomain(selectedDomaine.id).map((tech) => {
+                          const getTechIconClass = (techName) => {
+                            const techMap = {
+                              'html': 'devicon-html5-plain',
+                              'css': 'devicon-css3-plain',
+                              'javascript': 'devicon-javascript-plain',
+                              'typescript': 'devicon-typescript-plain',
+                              'vue.js': 'devicon-vuejs-plain',
+                              'react': 'devicon-react-original',
+                              'angular': 'devicon-angularjs-plain',
+                              'svelte': 'devicon-svelte-plain',
+                              'node': 'devicon-nodejs-plain',
+                              'express': 'devicon-express-original',
+                              'nestjs': 'devicon-nestjs-plain',
+                              'python': 'devicon-python-plain',
+                              'java': 'devicon-java-plain',
+                              'c': 'devicon-c-plain',
+                              'c++': 'devicon-cplusplus-plain',
+                              'c#': 'devicon-csharp-plain',
+                              'go': 'devicon-go-plain',
+                              'rust': 'devicon-rust-plain',
+                              'php': 'devicon-php-plain',
+                              'ruby': 'devicon-ruby-plain',
+                            };
 
-      const normalizedName = techName
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/#/g, 'sharp')
-        .replace(/\+/g, 'plus');
+                            const normalizedName = techName
+                              .toLowerCase()
+                              .replace(/\s+/g, '')
+                              .replace(/#/g, 'sharp')
+                              .replace(/\+/g, 'plus');
 
-      return techMap[normalizedName] || `devicon-${normalizedName}-plain`;
-    };
+                            return techMap[normalizedName] || `devicon-${normalizedName}-plain`;
+                          };
 
-    // 2. Vérifie si l'icône existe dans Devicon
-    const techIconClass = getTechIconClass(tech.nom_technologie);
+                          const techIconClass = getTechIconClass(tech.nom_technologie);
 
-    return (
-      <tr key={tech.id}>
-        <td>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {/* Icône Devicon (si elle existe) */}
-            <i className={`${techIconClass} colored`} style={{ fontSize: "1.5rem" }}></i>
-            {tech.nom_technologie}
-          </div>
-        </td>
-        <td>{tech.version}</td>
-        <td>
-          <Badge color={tech.statut === 'actif' ? 'success' : 'danger'} pill>
-            {tech.statut}
-          </Badge>
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
+                          return (
+                            <tr key={tech.id}>
+                              <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <i className={`${techIconClass} colored`} style={{ fontSize: "1.5rem" }}></i>
+                                  {tech.nom_technologie}
+                                </div>
+                              </td>
+                              <td>{tech.version}</td>
+                              <td>
+                                <Badge color={tech.statut === 'actif' ? 'success' : 'danger'} pill>
+                                  {tech.statut}
+                                </Badge>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
                     </Table>
                   ) : (
                     <div className="text-center py-4">

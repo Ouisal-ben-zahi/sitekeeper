@@ -42,16 +42,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 
 
-Route::post('/run-detect-technologies', function () {
-    Artisan::call('domain:detect-technologies', [
-        '--all' => true,
-    ]);
 
-    return response()->json([
-        'message' => 'Commande exécutée avec succès !',
-        'output' => Artisan::output(),
-    ]);
-});
 
 Route::post('/run-detect-technologies', function () {
     try {
