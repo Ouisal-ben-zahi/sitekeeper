@@ -41,6 +41,39 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+ 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
+  // Pagination functions
+  const paginate = (items, pageNumber, pageSize) => {
+    const startIndex = (pageNumber - 1) * pageSize;
+    return items.slice(startIndex, startIndex + pageSize);
+  };
+
+  const currentItems = paginate(filteredUsers, currentPage, itemsPerPage);
+
+  const pageNumbers = [];
+  for (let i = 1; i <= Math.ceil(filteredUsers.length / itemsPerPage); i++) {
+    pageNumbers.push(i);
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < pageNumbers.length) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   // Form states
   const [formData, setFormData] = useState({
@@ -406,7 +439,7 @@ const Users = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => (
+                  {currentItems.map((user) => (
                     <tr key={user.id}>
                       <th scope="row">
                         <Media className="align-items-center">
@@ -446,7 +479,7 @@ const Users = () => {
                                                                                           tag={Link}>
                               <FaEye className="mr-2" /> View
                             </DropdownItem>
-                           
+                            <DropdownItem divider />
                             <DropdownItem onClick={(e) => handleDelete(user.id, e)}>
                               <FaTrash className="mr-2" /> Delete
                             </DropdownItem>
@@ -457,58 +490,29 @@ const Users = () => {
                   ))}
                 </tbody>
               </Table>
-              <CardFooter className="py-4">
-                <nav aria-label="...">
-                  <Pagination
-                    className="pagination justify-content-end mb-0"
-                    listClassName="justify-content-end mb-0"
-                  >
-                    <PaginationItem className="disabled">
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                        tabIndex="-1"
-                      >
-                        <i className="fas fa-angle-left" />
-                        <span className="sr-only">Previous</span>
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem className="active">
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        2 <span className="sr-only">(current)</span>
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        3
-                      </PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink
-                        href="#pablo"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <i className="fas fa-angle-right" />
-                        <span className="sr-only">Next</span>
-                      </PaginationLink>
-                    </PaginationItem>
-                  </Pagination>
-                </nav>
-              </CardFooter>
+               <CardFooter className="py-4">
+                              <nav aria-label="Domains pagination">
+                                <Pagination className="justify-content-end mb-0">
+                                  <PaginationItem disabled={currentPage === 1}>
+                                    <PaginationLink previous tag="button" onClick={handlePrevPage}>
+                                      <i className="fas fa-angle-left" />
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                  {pageNumbers.map(number => (
+                                    <PaginationItem key={number} active={number === currentPage}>
+                                      <PaginationLink tag="button" onClick={() => handlePageChange(number)}>
+                                        {number}
+                                      </PaginationLink>
+                                    </PaginationItem>
+                                  ))}
+                                  <PaginationItem disabled={currentPage === pageNumbers.length}>
+                                    <PaginationLink next tag="button" onClick={handleNextPage}>
+                                      <i className="fas fa-angle-right" />
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                </Pagination>
+                              </nav>
+                            </CardFooter>
             </Card>
           </div>
         </Row>

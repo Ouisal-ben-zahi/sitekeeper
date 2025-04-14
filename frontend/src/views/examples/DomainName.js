@@ -736,12 +736,15 @@ const DomainName = () => {
                               <DropdownItem onClick={() => handleViewDomaine(domaine)}>
                                 <i className="fas fa-eye mr-2"></i> View
                               </DropdownItem>
+                              <DropdownItem divider />
                               <DropdownItem onClick={() => openEditModal(domaine)}>
                                 <i className="fas fa-edit mr-2"></i> Edit
                               </DropdownItem>
+                              <DropdownItem divider />
                               <DropdownItem onClick={() => runDetectForDomain(domaine.id)}>
                                 <i className="fas fa-search mr-2"></i> Detect Technology
                               </DropdownItem>
+                              <DropdownItem divider />
                               <DropdownItem onClick={() => handleDelete(domaine.id)}>
                                 <i className="fas fa-trash mr-2"></i> Delete
                               </DropdownItem>

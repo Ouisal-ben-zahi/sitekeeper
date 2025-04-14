@@ -159,7 +159,7 @@ const Sidebar = (props) => {
           {/* Navigation */}
           <Nav navbar>
             {/* Dashboard Section */}
-            <h6 className="navbar-heading text-muted">Main Menu</h6>
+            <h6 className="navbar-heading text-muted px-3">Main Menu</h6>
             <NavItem>
               <NavLink
                 to="/admin/dashboard"
@@ -186,7 +186,7 @@ const Sidebar = (props) => {
             </NavItem>
 
             {/* Domain Management */}
-            <h6 className="navbar-heading text-muted mt-3">Domain Services</h6>
+            <h6 className="navbar-heading text-muted mt-3 px-3">Domain Services</h6>
             <NavItem>
             <NavLink
                 to="/admin/domains"
@@ -224,7 +224,7 @@ const Sidebar = (props) => {
             </NavItem>
 
             {/* User Section */}
-            <h6 className="navbar-heading text-muted mt-3">Administration</h6>
+            <h6 className="navbar-heading text-muted mt-3 px-3">Administration</h6>
             <NavItem>
               <NavLink
                 to="/admin/users"
@@ -238,12 +238,13 @@ const Sidebar = (props) => {
             </NavItem>
 
             {/* Logout Section */}
-            <h6 className="navbar-heading text-muted mt-3">Account</h6>
+            <h6 className="navbar-heading text-muted mt-3 px-3">Account</h6>
             <NavItem>
               <NavLink
                 to="#"
+                tag={NavLinkRRD}
+                activeClassName="active"
                 onClick={handleLogout}
-                className="cursor-pointer"
               >
                 <i className="ni ni-user-run text-danger" />
                 Logout

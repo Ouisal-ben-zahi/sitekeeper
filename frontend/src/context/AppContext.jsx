@@ -7,6 +7,7 @@ export default function AppProvider({ children }) {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [user, setUser] = useState(null);
     const [userRole, setUserRole] = useState(localStorage.getItem('RoleUser'));
+    const [userId, setUserId] = useState(localStorage.getItem('UserId'));
     const [isLoading, setIsLoading] = useState(true);
 
     async function getUser() {
@@ -22,7 +23,9 @@ export default function AppProvider({ children }) {
             const data = await res.json();
             setUser(data);
             setUserRole(data.role);
+            setUserId(data.id);  // Assuming the user object has an 'id' property
             localStorage.setItem('RoleUser', data.role);
+            localStorage.setItem('UserId', data.id);
             setIsLoading(false);
             return data;
         } catch (error) {
@@ -35,19 +38,22 @@ export default function AppProvider({ children }) {
     function logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('RoleUser');
+        localStorage.removeItem('UserId');
         setToken(null);
         setUser(null);
         setUserRole(null);
+        setUserId(null);
         setIsLoading(false);
     }
     
-
     function login(newToken, userData) {
         localStorage.setItem('token', newToken);
         localStorage.setItem('RoleUser', userData.role);
+        localStorage.setItem('UserId', userData.id);
         setToken(newToken);
         setUser(userData);
         setUserRole(userData.role);
+        setUserId(userData.id);
     }
 
     useEffect(() => {
@@ -63,6 +69,7 @@ export default function AppProvider({ children }) {
             token, 
             user, 
             userRole, 
+            userId,
             isLoading,
             login,
             logout,
