@@ -16,18 +16,18 @@
 
 */
 import Index from "views/Index.js";
-import Profile from "views/examples/Profile.js";
-import Register from "views/examples/Register.js";
-import Login from "views/examples/Login.js";
-import LogoutToLogin from "views/examples/logout";
-import Clients from "views/examples/Clients";
-import ClientProfile from "views/examples/ClientProfile";
-import DomainDetails from "views/examples/domainDetails";
-import Users from "views/examples/Users";
-import DomainName from "views/examples/DomainName";
-import UserProfile from "views/examples/UserDetails";
-import History from "views/examples/history";
-import HistoryTechnology from "views/examples/HistoryTechnology";
+import Profile from "views/pages/Profile.js";
+import Register from "views/pages/Register.js";
+import Login from "views/pages/Login.js";
+import LogoutToLogin from "views/pages/logout";
+import Clients from "views/pages/Clients";
+import ClientProfile from "views/pages/ClientProfile";
+import DomainDetails from "views/pages/domainDetails";
+import Users from "views/pages/Users";
+import DomainName from "views/pages/DomainName";
+import UserProfile from "views/pages/UserDetails";
+import History from "views/pages/history";
+import HistoryTechnology from "views/pages/HistoryTechnology";
 
 var routes = [
   {

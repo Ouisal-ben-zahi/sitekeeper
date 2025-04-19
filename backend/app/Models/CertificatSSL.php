@@ -19,4 +19,8 @@ class CertificatSSL extends Model
         'date_expiration', // Date d'expiration du certificat
         'statut', // Statut du certificat (valide/expiré)
     ];
+    public function domaine()
+    {
+        return $this->belongsTo(Domaine::class);
+    }
 }

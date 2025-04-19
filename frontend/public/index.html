@@ -10,13 +10,26 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
     <title>SiteKeeper</title>
-    
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" />
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!-- OneSignal SDK -->
+    <!-- OneSignal SDK - IMPORTANT: Sans 'defer' pour un chargement plus précoce -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-   
-  </body>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "744391d8-93db-4da9-8a7c-4b4f956e429c",
+          safari_web_id: "web.onesignal.auto.20044851-a7f8-4507-9604-3e42dc43ffbf",
+          notifyButton: {
+            enable: true,
+          },
+          allowLocalhostAsSecureOrigin: true,
+        });
+      });
+    </script>
+      </body>
 </html>
