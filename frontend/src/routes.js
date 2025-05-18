@@ -17,7 +17,6 @@
 */
 import Index from "views/Index.js";
 import Profile from "views/pages/Profile.js";
-import Register from "views/pages/Register.js";
 import Login from "views/pages/Login.js";
 import LogoutToLogin from "views/pages/logout";
 import Clients from "views/pages/Clients";
@@ -130,12 +129,6 @@ var routes = [
     component: <LogoutToLogin />,
     layout: "/auth",
   },
-  {
-    path: "/register",
-    name: "Register",
-    icon: "ni ni-circle-08 text-pink",
-    component: <Register />,
-    layout: "/auth",
-  },
+ 
 ];
 export default routes;
